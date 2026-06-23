@@ -2,14 +2,17 @@ import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 
 interface Props {
+  initialDate: string;
+  initialStartTime: string;
+  initialEndTime: string;
   onClose: () => void;
   onCreated: () => void;
 }
 
-export function CreateWindowForm({ onClose, onCreated }: Props) {
-  const [date, setDate] = useState('');
-  const [startTime, setStartTime] = useState('15:00');
-  const [endTime, setEndTime] = useState('18:30');
+export function CreateWindowForm({ initialDate, initialStartTime, initialEndTime, onClose, onCreated }: Props) {
+  const [date, setDate] = useState(initialDate);
+  const [startTime, setStartTime] = useState(initialStartTime);
+  const [endTime, setEndTime] = useState(initialEndTime);
   const [location, setLocation] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);

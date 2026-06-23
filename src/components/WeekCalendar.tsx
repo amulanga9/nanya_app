@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { addDays, formatDayLabel, startOfWeek, toISODate } from '../lib/date';
+import { addDays, formatDayLabel, minutesToTime, startOfWeek, toISODate } from '../lib/date';
 import { CALENDAR_START_HOUR, CALENDAR_END_HOUR, ROW_HEIGHT_PX } from '../lib/constants';
 import type { Booking, NannyWindow } from '../lib/types';
 import { WindowBlock } from './WindowBlock';
@@ -10,20 +10,51 @@ interface Props {
   isAdmin: boolean;
   onWindowClick: (w: NannyWindow) => void;
   onSlotClick: (w: NannyWindow, slotStartMinutes: number) => void;
+  onRangeSelect: (date: string, startTime: string, endTime: string) => void;
 }
 
 const SLOT_COUNT = ((CALENDAR_END_HOUR - CALENDAR_START_HOUR) * 60) / 30;
 const TOTAL_HEIGHT = SLOT_COUNT * ROW_HEIGHT_PX;
 
-export function WeekCalendar({ windows, bookings, isAdmin, onWindowClick, onSlotClick }: Props) {
+export function WeekCalendar({ windows, bookings, isAdmin, onWindowClick, onSlotClick, onRangeSelect }: Props) {
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date()));
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
   const [now, setNow] = useState(new Date());
+  const [drag, setDrag] = useState<{ iso: string; startIdx: number; endIdx: number } | null>(null);
 
   useEffect(() => {
     const interval = setInterval(() => setNow(new Date()), 60_000);
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    if (!drag) return;
+    function finish() {
+      setDrag((d) => {
+        if (d) {
+          const fromIdx = Math.min(d.startIdx, d.endIdx);
+          const toIdx = Math.max(d.startIdx, d.endIdx);
+          const startMinutes = CALENDAR_START_HOUR * 60 + fromIdx * 30;
+          const endMinutes = CALENDAR_START_HOUR * 60 + (toIdx + 1) * 30;
+          onRangeSelect(d.iso, minutesToTime(startMinutes), minutesToTime(endMinutes));
+        }
+        return null;
+      });
+    }
+    window.addEventListener('mouseup', finish);
+    return () => window.removeEventListener('mouseup', finish);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [drag]);
+
+  function handleSlotMouseDown(iso: string, idx: number) {
+    if (!isAdmin) return;
+    setDrag({ iso, startIdx: idx, endIdx: idx });
+  }
+
+  function handleSlotMouseEnter(iso: string, idx: number) {
+    if (!isAdmin || !drag || drag.iso !== iso) return;
+    setDrag({ ...drag, endIdx: idx });
+  }
 
   const hours = Array.from({ length: CALENDAR_END_HOUR - CALENDAR_START_HOUR }, (_, i) => CALENDAR_START_HOUR + i);
 
@@ -82,13 +113,25 @@ export function WeekCalendar({ windows, bookings, isAdmin, onWindowClick, onSlot
                   {formatDayLabel(day)}
                 </div>
                 <div className="relative" style={{ height: TOTAL_HEIGHT }}>
-                  {Array.from({ length: SLOT_COUNT }).map((_, i) => (
-                    <div
-                      key={i}
-                      style={{ height: ROW_HEIGHT_PX }}
-                      className={`border-t ${i % 2 === 0 ? 'border-slate-800' : 'border-slate-900'}`}
-                    />
-                  ))}
+                  {Array.from({ length: SLOT_COUNT }).map((_, i) => {
+                    const inSelection =
+                      isAdmin &&
+                      drag !== null &&
+                      drag.iso === iso &&
+                      i >= Math.min(drag.startIdx, drag.endIdx) &&
+                      i <= Math.max(drag.startIdx, drag.endIdx);
+                    return (
+                      <div
+                        key={i}
+                        style={{ height: ROW_HEIGHT_PX }}
+                        className={`border-t ${i % 2 === 0 ? 'border-slate-800' : 'border-slate-900'} ${
+                          isAdmin ? 'cursor-pointer select-none' : ''
+                        } ${inSelection ? 'bg-teal-700/50' : ''}`}
+                        onMouseDown={() => handleSlotMouseDown(iso, i)}
+                        onMouseEnter={() => handleSlotMouseEnter(iso, i)}
+                      />
+                    );
+                  })}
 
                   {offset !== null && (
                     <div

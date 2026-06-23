@@ -22,6 +22,14 @@ export function toISODate(date: Date): string {
   return `${y}-${m}-${d}`;
 }
 
+export function minutesToTime(minutes: number): string {
+  const h = Math.floor(minutes / 60)
+    .toString()
+    .padStart(2, '0');
+  const m = (minutes % 60).toString().padStart(2, '0');
+  return `${h}:${m}`;
+}
+
 export function formatDayLabel(date: Date): string {
   return `${DAY_NAMES[date.getDay() === 0 ? 6 : date.getDay() - 1]} ${date.getDate()}.${(date.getMonth() + 1)
     .toString()

@@ -14,7 +14,7 @@ function App() {
   const [isAdmin, setIsAdmin] = useState(isNannySession);
   const { windows, bookings, loading, refetch } = useScheduleData();
 
-  const [showCreateWindow, setShowCreateWindow] = useState(false);
+  const [windowDraft, setWindowDraft] = useState<{ date: string; startTime: string; endTime: string } | null>(null);
   const [activeWindow, setActiveWindow] = useState<NannyWindow | null>(null);
   const [bookingSlot, setBookingSlot] = useState<{ window: NannyWindow; slotStart: number } | null>(null);
   const [showMyBookings, setShowMyBookings] = useState(false);
@@ -31,6 +31,12 @@ function App() {
     }
   }
 
+  function handleRangeSelect(date: string, startTime: string, endTime: string) {
+    if (isAdmin) {
+      setWindowDraft({ date, startTime, endTime });
+    }
+  }
+
   if (wantsAdmin && !isAdmin) {
     return <NannyLogin onSuccess={() => setIsAdmin(true)} />;
   }
@@ -44,23 +50,15 @@ function App() {
         </div>
         <div className="flex gap-2">
           {isAdmin ? (
-            <>
-              <button
-                onClick={() => setShowCreateWindow(true)}
-                className="px-3 py-1.5 rounded bg-teal-600 hover:bg-teal-500 text-sm"
-              >
-                + Открыть окно
-              </button>
-              <button
-                onClick={() => {
-                  nannyLogout();
-                  setIsAdmin(false);
-                }}
-                className="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-sm"
-              >
-                Выйти
-              </button>
-            </>
+            <button
+              onClick={() => {
+                nannyLogout();
+                setIsAdmin(false);
+              }}
+              className="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-sm"
+            >
+              Выйти
+            </button>
           ) : (
             <button
               onClick={() => setShowMyBookings(true)}
@@ -82,12 +80,19 @@ function App() {
             isAdmin={isAdmin}
             onWindowClick={handleWindowClick}
             onSlotClick={handleSlotClick}
+            onRangeSelect={handleRangeSelect}
           />
         )}
       </main>
 
-      {showCreateWindow && (
-        <CreateWindowForm onClose={() => setShowCreateWindow(false)} onCreated={refetch} />
+      {windowDraft && (
+        <CreateWindowForm
+          initialDate={windowDraft.date}
+          initialStartTime={windowDraft.startTime}
+          initialEndTime={windowDraft.endTime}
+          onClose={() => setWindowDraft(null)}
+          onCreated={refetch}
+        />
       )}
 
       {activeWindow && (
