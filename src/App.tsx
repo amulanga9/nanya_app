@@ -5,10 +5,13 @@ import { CreateWindowForm } from './components/CreateWindowForm';
 import { NannyPanel } from './components/NannyPanel';
 import { BookingPopup } from './components/BookingPopup';
 import { MyBookings } from './components/MyBookings';
+import { NannyLogin } from './components/NannyLogin';
+import { isNannySession, nannyLogout } from './lib/auth';
 import type { NannyWindow } from './lib/types';
 
 function App() {
-  const isAdmin = useMemo(() => new URLSearchParams(window.location.search).get('admin') === '1', []);
+  const wantsAdmin = useMemo(() => new URLSearchParams(window.location.search).get('admin') === '1', []);
+  const [isAdmin, setIsAdmin] = useState(isNannySession);
   const { windows, bookings, loading, refetch } = useScheduleData();
 
   const [showCreateWindow, setShowCreateWindow] = useState(false);
@@ -28,6 +31,10 @@ function App() {
     }
   }
 
+  if (wantsAdmin && !isAdmin) {
+    return <NannyLogin onSuccess={() => setIsAdmin(true)} />;
+  }
+
   return (
     <div className="h-screen flex flex-col bg-slate-950 text-slate-100">
       <header className="flex items-center justify-between px-4 py-3 border-b border-slate-800">
@@ -37,12 +44,23 @@ function App() {
         </div>
         <div className="flex gap-2">
           {isAdmin ? (
-            <button
-              onClick={() => setShowCreateWindow(true)}
-              className="px-3 py-1.5 rounded bg-teal-600 hover:bg-teal-500 text-sm"
-            >
-              + Открыть окно
-            </button>
+            <>
+              <button
+                onClick={() => setShowCreateWindow(true)}
+                className="px-3 py-1.5 rounded bg-teal-600 hover:bg-teal-500 text-sm"
+              >
+                + Открыть окно
+              </button>
+              <button
+                onClick={() => {
+                  nannyLogout();
+                  setIsAdmin(false);
+                }}
+                className="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-sm"
+              >
+                Выйти
+              </button>
+            </>
           ) : (
             <button
               onClick={() => setShowMyBookings(true)}
